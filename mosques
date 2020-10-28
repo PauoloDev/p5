@@ -1,0 +1,413 @@
+//priemr declarem totes les constants qeu farem servir: el maxim de mosques que es crearan, el minim, la velocitat maxima, i la minima a la que poden anar les mosques. També tenim el maxim de línies que es represetaran a la pantalla de registre.
+
+const MAX_MOSQUES = 20;
+const MIN_MOSQUES = 4;
+const MAX_VELOCITY = 5;
+const MIN_VELOCITY = -5;
+const maximLinies = 5;
+
+// numMosques guarda el total de mosques en joc
+var numMosques = 0;
+// aquests dos array guarden la velocitat x i y de cada mosca
+var velocitatMosquesX = [];
+var velocitatMosquesY = [];
+//aquests array guarden la x i la y de cada mosca
+var x = [];
+var y = [];
+// aquest array guarda si cada mosca esta lliure o atrapada.
+var atrapades = [];
+//aquest array guarda el numero de la partida
+var numPartides = [];
+//aquest array guarda el nomrbe d'intents de cada partida
+var numIntents = [];
+//aquest array guarda el nomrbe d'encerts de cada partida
+var numEncerts = [];
+//aquest array guarda el nombre de temps restant de cada partida
+var numTemps = [];
+//aqueta variable es un index que faig servir per a recorrer un bucle
+var index = 0;
+//aquesta variable guarda una imatge
+var img = "";
+//aquesta variable guarda el numero de partida actual
+var numPartida = 1;
+//aquesta variable guarda el numero d'intents de la partida actual
+var numIntent = 0;
+//el tamany de les mosques
+var tamanyMosca = 0;
+//index per a recorrer bucles.
+var i = 0;
+//aquesta variable guarda quantes mosques hi han atrapades de moment.
+var totalMosques = 0;
+// aquesta variable guarda el temps actual, contat en segons desde que s'ha iniciat la pantalla
+var temps = 0;
+//aquesta variable guarda en quin segon exacte comença cada partida
+var tempsInicial = 0;
+//aquesta variable mostra el temps que ens queda despres de anar restant els segons
+var tempsTotal = 0;
+//aquesta variable es el temps límit que tenim per completar el joc
+var tempsObjectiu = 0;
+
+var augmentVelocitat = 0;
+//per a saber si el joc s'ha acabat o no
+var gameOver = false;
+
+//text que apareixera quan s'acaba el joc, i una variable que guarda en quin estat esta la partida, dins dels tres possibles: No iniciada, Partida Iniciada, Partida acabada.
+var textGameOver = "";
+var estatPartida = "No iniciada";
+var img2 ="";
+
+//aquesta funcio es per carregar fonts i imatges abans de que comenci l'execució
+function preload() {
+
+  
+  //myFont = loadFont('assets/lithosProRegular.otf');
+  //myFontBold = loadFont('assets/LITHOSPRO-BLACK.OTF');
+ // myFontHand = loadFont('assets/SEGOESC.TTF');
+  img = loadImage("/assets/mosca.png");
+  img2 = loadImage("/assets/intro.jpg");
+}
+
+
+
+
+function setup() {
+  //el canvas depen de la finestra
+  createCanvas(windowHeight * 0.80, windowHeight * 0.80);
+  //inicio el index;
+  index = 1;
+  //determino el nombre de mosques fent servir el random
+  numMosques = round(random(MIN_MOSQUES, MAX_MOSQUES));
+  //inicio els valors
+  iniciarValors();
+  //el tamany de la mosca
+  tamanyMosca = width / 14;
+  //comencem sense mosques atrapades
+  totalMosques = 0;
+  //els segons que han passat desde que ha començat l'execució (dividim milisegons entre 1000 per obtenir segons)
+  tempsInicial = round(millis() / 1000);
+  //el temps objectiu
+  tempsObjectiu = 30;
+
+}
+
+function draw() {
+  
+  background(220);
+  textAlign(CENTER, CENTER);
+  //el cronometre, comptara edsde 0 fins a "infinit" sempre i que duri l'execució.
+  temps = round(millis() / 1000);
+  if (gameOver == false && estatPartida == "Partida iniciada") {
+    //creo el objecte que he definit a la classe
+    var rellotge = new Informacio();
+    //inicio funcions
+    comptador();
+    dibuixarMosques();
+    //inicio els objectes que apareixen en pantalla
+    rellotge.temps();
+    rellotge.display();
+    //més funcions
+    limits();
+    victoria();
+
+  } 
+if(estatPartida == "No iniciada"){
+  var previa = new Informacio();
+  previa.prejoc();
+  
+}
+  
+//depenent del estat de la partida a pantalla es mostra una informació o una altra;
+  if (estatPartida == "Partida iniciada" && gameOver) {
+  var resultat = new Informacio();
+  resultat.win();
+  }
+  if(gameOver){
+   estatPartida == "Partida acabada"; 
+    
+  }
+    if (estatPartida == "Partida acabada") {
+    var taula = new Informacio();
+    taula.puntuacions();
+  }
+//si el temps restant es menys de la meitat, la velocitat de les mosques augmenta i el seu tamany disminueix
+  if(estatPartida== "Partida iniciada" && tempsTotal <= tempsObjectiu/2){
+   for(i = 0; i<=numMosques && augmentVelocitat<1;i++){
+    velocitatMosquesX[i] = velocitatMosquesX[i]*2;
+    velocitatMosquesY[i] = velocitatMosquesY[i]*2;
+     
+   }
+   augmentVelocitat = 1;  
+  tamanyMosca = width/22;  
+  }else{
+  tamanyMosca = width / 14;     
+  }
+}
+
+//aquesta funció col:loca les mosques en la posició inicial i els hi otorga una velocitat x  y.
+function iniciarValors() {
+
+  for (i = 0; i <= numMosques - 1; i++) {
+    atrapades[i] = "lliure";
+    x[i] = (width / numMosques * i);
+    y[i] = (height / numMosques * i);
+    velocitatMosquesX[i] = random(MIN_VELOCITY, MAX_VELOCITY + 1);
+    velocitatMosquesY[i] = random(MIN_VELOCITY, MAX_VELOCITY + 1);
+  }
+}
+
+//aquesta funció posa a les mosques en moviment sempre i quan no estiguin ja atrapades
+function dibuixarMosques() {
+
+  for (i = 0; i <= numMosques - 1; i++) {
+    if (atrapades[i] == "lliure") {
+      x[i] = x[i] + velocitatMosquesX[i];
+      y[i] = y[i] + velocitatMosquesY[i];
+      var mosques = new Mosca();
+      mosques.mosca();
+    }
+  }
+}
+//aquesta funció fa que les mosques no puguin sortir del canvas. Quan toquen els marges, canvien la seva velocitat fent una inversió: si era positiva passa a ser negativa, i a la inversa.
+function limits() {
+
+  for (i = 0; i <= numMosques; i++) {
+    if (x[i] < 0 || x[i] > width) {
+
+      velocitatMosquesX[i] = velocitatMosquesX[i] * -1;
+
+    }
+    if (y[i] < 0 || y[i] > height) {
+
+      velocitatMosquesY[i] = velocitatMosquesY[i] * -1;
+
+    }
+  //per tal de limitar alguns moviments, vaig especificar encara més que passar quan una mosca surt dels marges, ja que alguna mosca es quedava buguejada sense aixo (atrapada als marges);
+    if (x[i] < 0) {
+
+      x[i] = 0;
+
+    }
+    if (x[i] > width) {
+
+      x[i] = width;
+
+    }
+    if (y[i] < 0) {
+
+      y[i] = 0;
+
+    }
+    if (y[i] > height) {
+
+      y[i] = height;
+
+    }
+  }
+}
+//aquesta funcio controla que passa cada cop que apretem el mouse.
+function mousePressed() {
+  if (estatPartida == "No iniciada") {
+    estatPartida = "Partida iniciada";
+    tempsInicial = round(millis()/1000);
+  } else if (estatPartida == "Partida iniciada" && gameOver) {
+    estatPartida = "Partida acabada";
+  } else if (estatPartida == "Partida acabada") {
+    reset();
+    estatPartida = "No iniciada";
+
+  } else if (!gameOver) {
+    numIntent = numIntent + 1;
+  }
+  //si apretem sobre una mosca, i aquesta mosca no ha set atrapada ja, la posarà en estat atrapada i el nombre total de mosques pujarà.
+  for (i = 0; i <= numMosques - 1; i++) {
+    if (mouseX > x[i] - tamanyMosca / 2 && mouseX < x[i] + tamanyMosca / 2 && mouseY > y[i] - tamanyMosca / 2 && mouseY < y[i] + tamanyMosca / 2) {
+      if (atrapades[i] == "lliure") {
+        atrapades[i] = "atrapada";
+        totalMosques = totalMosques + 1;
+
+      }
+    }
+  }
+//en el moment que fem clic i el joc ja ha acabat, les variables que guardaven la informacio de partida, encerts i intents es guarda en un array.
+  if (gameOver) {
+    numEncerts[index] = totalMosques;
+    numIntents[index] = numIntent;
+    numTemps[index] = tempsTotal;
+    numPartides[index] = numPartida;
+
+  }
+  
+}
+//aquesta funció inicialitza altre cop els valors que hem anat canviant, per a tornar al punt inicial i reiniciar el joc.
+function reset() {
+  //buido els arrays per si les "mosques"
+  x = [];
+  y = [];
+  tempsInicial = round(millis() / 1000);
+  atrapades = [];
+  velocitatMosquesX = [];
+  velocitatMosquesY = [];
+  numMosques = round(random(MIN_MOSQUES, MAX_MOSQUES));
+  iniciarValors();
+  totalMosques = 0;
+  gameOver = false;
+  numIntent = 0;
+  numPartida = numPartida + 1;
+    index= index + 1;
+  if (index > maximLinies) {
+    index = 1;
+  }
+ augmentVelocitat = 0; 
+}
+
+//aquesta funció fa de rellotge
+function comptador() {
+
+  if (estatPartida == "Partida iniciada") {
+    tempsTotal = tempsObjectiu - (temps - tempsInicial);
+  }
+}
+
+//aquesta funció controla en quina condició acabem el joc: derrota o victoria.
+function victoria() {
+  textAlign(CENTER, CENTER);
+  if (tempsTotal < 0) {
+    gameOver = true;
+    tempsTotal = 0;
+    
+
+  }
+  if (totalMosques == numMosques) {
+    gameOver = true;
+    
+
+  }
+
+}
+
+
+function windowResized() {
+  //això canvia el tamany de la finestra
+  if (windowHeight <= windowWidth) {
+//aquest if el faig servir per a que es canvii el tamany encara que no la reduïm en altura (per tal de que es vegui sepre cuadrada nomes faig servir un valor per a la x i la y)
+    resizeCanvas(windowHeight * 0.8, windowHeight * 0.8);
+
+  } else {
+    resizeCanvas(windowWidth * 0.8, windowWidth * 0.8);
+  }
+}
+
+//He creat diferents objectes, un per a la informació de pantalla, l'altre per a les mosques, i l'altre per a la pantalla de registre
+
+
+class Informacio {
+  constructor(posX, posY) {
+    this.posX = width / 10;
+    this.posY = height * 0.20;
+    this.display = function() {
+
+
+      //AQUESTA LINIEA DE CODI DE textFont es la que s'ha de canviar per a canviar la tipografia del que surt a pantalla!
+
+      //textFont(myFontBold);
+
+      fill("black");
+      textSize(width / 30);
+      text("Partida", this.posX, this.posY / 4);
+      text("Intents", this.posX * 5, this.posY / 4);
+      text("Encerts", this.posX * 9, this.posY / 4);
+
+      //interficie d'usuari, per aveure punts i nivell de dificultat
+
+
+
+      //AQUESTA LINIEA DE CODI DE textFont es la que s'ha de canviar per a canviar la tipografia del que surt a pantalla!
+
+      //textFont(myFontHand);
+
+
+
+
+      text(numPartida, this.posX, this.posY/2);
+      text(numIntent, this.posX * 5, this.posY/2);
+      text(totalMosques, this.posX * 9, this.posY/2);
+
+
+
+    }
+    this.temps = function() {
+      fill("black");
+      textSize(width/14);
+      text(tempsTotal, this.posX * 5, this.posY * 4.8);
+
+
+    }
+ this.puntuacions = function() {
+     
+      fill("black");
+      textSize(width / 20);
+      text("Puntuacions", width / 2, this.pY * 0.4);
+      textSize(width / 30);
+      //textFont(myFont);
+      text("Partida", this.posX*2, this.posY * 0.9);
+      text("Intents", this.posX * 4, this.posY * 0.9);
+      text("Encerts", this.posX * 6, this.posY * 0.9);
+      text("Temps", this.posX * 8, this.posY * 0.9);
+
+   //AQUÏ ES CANVIA LA FONT
+   
+   //textFont(myFont);
+   
+   
+      //interficie d'usuari, per aveure punts i nivell de dificultat
+      for (i = 1; i <= maximLinies; i++) {
+       // textFont(myFontHand);
+        
+        if (numPartides[i] != undefined) {
+          
+
+          text(numPartides[i], this.posX*2, this.posY + i * height * 0.05);
+          text(numIntents[i], this.posX * 4, this.posY + i * height * 0.05);
+          text(numEncerts[i], this.posX * 6, this.posY + i * height * 0.05);
+          text(numTemps[i], this.posX * 8, this.posY + i * height * 0.05);
+        }
+      }
+    }
+  this.win = function(){
+    if(tempsTotal<=0){
+    textGameOver = "Has perdut";  
+      
+    }else{
+      
+    textGameOver = "Has guanyat";  
+      
+    }
+  text(textGameOver, width / 2, height / 2);  
+    
+    
+  }
+  this.prejoc = function(){
+  imageMode(CENTER); 
+  image(img2,width/2,height/2,width,height);
+    
+    
+  }
+  }
+}
+
+
+
+class Mosca{
+  constructor(posX, posY, tamany){
+    this.posX = x[i];
+    this.posY = y[i];
+    this.tamany = tamanyMosca;
+    this.imag = img;
+    this.mosca = function() {
+    imageMode(CENTER);
+    image(this.imag, this.posX, this.posY, this.tamany, this.tamany);
+    
+    }  
+    
+  }
+}
